@@ -9,6 +9,7 @@ Created on Sun Sep  9 20:22:08 2018
 import requests
 import os
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -97,7 +98,6 @@ def obtain_freeling(fileName):
     req = requests.post(url, files=files, params=params)
     return req.json()
 
-# In[6]:
 def get_database():
     db = open('reviews.txt', 'r')
     db_data = []
@@ -108,8 +108,79 @@ def get_database():
     db.close()
     return db_data, db_target
 
+# In[6]:
+def lr_results(data, target):
+    lr = lr_classification(data, target)
+    data = {'Accurancy': np.mean(lr[0]), 'Sensibility': np.mean(lr[1]), 'Specificity': np.mean(lr[2])}
+    df = pd.DataFrame(data, index=[1])
+    print('\nLogistic Regression Classification')
+    print(df)
+
+def knn_results(data, target):
+    ks = [1,3,5,7,9,15,25]
+    acc = []
+    sens = []
+    spec = []
+    for i in ks:
+        knn = knn_classification(data, target, i)
+        acc.append(np.mean(knn[0]))
+        sens.append(np.mean(knn[1]))
+        spec.append(np.mean(knn[2]))
+    data = {'Accurancy': acc, 'Sensibility': sens, 'Specificity': spec}
+    df = pd.DataFrame(data, index=ks)
+    print('\nK-Near Neighbors Classification')
+    print(df)
+    
+def rf_results(data, target):
+    n_estimators = [10,20,30,40,50]
+    acc = []
+    sens = []
+    spec = []
+    for i in n_estimators:
+        rf = rf_classification(data, target, i)
+        acc.append(np.mean(rf[0]))
+        sens.append(np.mean(rf[1]))
+        spec.append(np.mean(rf[2]))
+    data = {'Accurancy': acc, 'Sensibility': sens, 'Specificity': spec}
+    df = pd.DataFrame(data, index=n_estimators)
+    print('\nRandom Forest Classification')
+    print(df)
+
 # In[7]:
-def model_classification(data, y, model):
+def lr_classification(data, y):
+    model = LR()
+    acc = []
+    sens = []
+    spec = []
+    
+    for i in range(100):
+        Xtrain, Xtest, Ytrain, Ytest = train_test_split(data, y)
+        model.fit(Xtrain, Ytrain)
+        y_pred = model.predict(Xtest)
+        sen, spc = error_measures(y_pred, Ytest)
+        sens.append(sen)
+        spec.append(spc)
+        acc.append(model.score(Xtest, Ytest))
+    return acc, sens, spec
+
+def knn_classification(data, y, k):
+    model = KNN(n_neighbors=k)
+    acc = []
+    sens = []
+    spec = []
+    
+    for i in range(100):
+        Xtrain, Xtest, Ytrain, Ytest = train_test_split(data, y)
+        model.fit(Xtrain, Ytrain)
+        y_pred = model.predict(Xtest)
+        sen, spc = error_measures(y_pred, Ytest)
+        sens.append(sen)
+        spec.append(spc)
+        acc.append(model.score(Xtest, Ytest))
+    return acc, sens, spec
+
+def rf_classification(data, y, estimators):
+    model = RF(n_estimators=estimators)
     acc = []
     sens = []
     spec = []
@@ -137,16 +208,30 @@ if __name__ == '__main__':
         result = classification(req, senticon)
         x.append([result[0], result[1]])
     print(x)
-    # print_results(model_classification(data, target, LR()), 'Logistic Regression')
-    # print_results(model_classification(data, target, KNN()), 'K-Nearest Neighbors')
-    # print_results(model_classification(data, target, RF()), 'Random Forest')
     
 # In[8]:
-    lr = model_classification(x, target, LR())
-    print_results(lr[0], lr[1], lr[2], 'Logistic Regression')
+
     
-    knn = model_classification(x, target, KNN())
-    print_results(knn[0], knn[1], knn[2], 'KNN')
+# In[9]:
+    # Evaluando con x1, x2
+    lr_results(x, target)
+    knn_results(x, target)
+    rf_results(x, target)
     
-    rf = model_classification(x, target, RF())
-    print_results(rf[0], rf[1], rf[2], 'Random Forest')
+# In[10]:
+    data, target = get_database()
+    vectorTF = TfidfVectorizer()
+    vectorTF.fit(data)
+    bow = vectorTF.transform(data)
+    lr_results(bow, target)
+    knn_results(bow, target)
+    rf_results(bow, target)
+    
+# In[11]:
+    data, target = get_database()
+    vectorCount = CountVectorizer(ngram_range=(1,2))
+    vectorCount.fit(data)
+    bow = vectorCount.transform(data)
+    lr_results(bow, target)
+    knn_results(bow, target)
+    rf_results(bow, target)
