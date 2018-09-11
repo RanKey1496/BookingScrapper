@@ -71,9 +71,9 @@ def exists(array, word):
     return None
 
 # In[5]:
-def classification(res, senticon, x1, x2):
+def classification(res, senticon):
+    x1, x2 = 0, 0
     polarity = 1
-    sumWeight = 0
     for r in res:
         for word in r:
             if (is_negative(word['token'])):
@@ -81,13 +81,12 @@ def classification(res, senticon, x1, x2):
             if (word['tag'][0] == 'A'):
                 e = exists(senticon, word['lemma'])
                 if (e):
-                    sumWeight += float(e[1])*polarity
+                    if (float(e[1])*polarity > 0):
+                        x1 += float(e[1])
+                    else:
+                        x2 += float(e[1])
             if (polarity == -1 and word['token'] == '.'):
                 polarity = 1
-    if (sumWeight > 0):
-        x1 += 1
-    else:
-        x2 += 1
     return x1, x2
                         
 # In[6]:
@@ -122,7 +121,7 @@ def model_classification(data, y, model):
         sen, spc = error_measures(y_pred, Ytest)
         sens.append(sen)
         spec.append(spc)
-        acc.append(accuracy_score(Xtest, Ytest))
+        acc.append(accuracy_score(Ytest, y_pred))
     return acc, sens, spec
 
 # In[7]:
@@ -130,20 +129,24 @@ if __name__ == '__main__':
     write_comments_in_separeted_files()
     senticon = get_senticon()
     data, target = get_database()
-    x1, x2 = 0, 0
+    x = []
     files = get_file_names()
     for i in files:
         review = './reviews/' + i
         req = obtain_freeling(review)
-        res1, res2 = classification(req, senticon)
-        if ()
-        x1 += res1; x2 += res2;
-    print(x1, x2)
+        result = classification(req, senticon)
+        x.append([result[0], result[1]])
+    print(x)
     # print_results(model_classification(data, target, LR()), 'Logistic Regression')
     # print_results(model_classification(data, target, KNN()), 'K-Nearest Neighbors')
     # print_results(model_classification(data, target, RF()), 'Random Forest')
     
 # In[8]:
-    length = len(data)
-    print('Porcentaje de buenos comentarios: ', (x1/length)*100)
-    print('Porcentaje de malos comentarios: ', (x2/length)*100)
+    lr = model_classification(x, target, LR())
+    print_results(lr[0], lr[1], lr[2], 'Logistic Regression')
+    
+    knn = model_classification(x, target, KNN())
+    print_results(knn[0], knn[1], knn[2], 'KNN')
+    
+    rf = model_classification(x, target, RF())
+    print_results(rf[0], rf[1], rf[2], 'Random Forest')
